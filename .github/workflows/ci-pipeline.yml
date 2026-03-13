@@ -1,4 +1,4 @@
-name: Acquiring System CI
+name: Acquiring System CI/CD
 
 # Bu robot ne zaman çalışsın?
 on:
@@ -9,8 +9,13 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test Microservices
+    name: Build, Test & Deploy Microservices
     runs-on: ubuntu-latest # Robotun işletim sistemi (Linux)
+    
+    # GHCR'ye (GitHub Container Registry) imaj yazabilmek için gereken izinler
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     # 1. Kodu GitHub'dan sanal makineye çek
@@ -37,12 +42,43 @@ jobs:
         dotnet restore
         dotnet build --configuration Release --no-restore
         
+    # 5. Unit Testleri Çalıştır (Eğer burası patlarsa CD'ye geçmez!)
     - name: Run Unit Tests
       working-directory: ./src/Services/Gateway/Gateway.UnitTests
       run: dotnet test --verbosity normal
 
-    # 5. Docker Compose
-    - name: Install Docker Compose
+    # =========================================================
+    # --- CD (SÜREKLİ DAĞITIM / DOCKER PUSH) AŞAMASI ---
+    # =========================================================
+
+    # 6. GitHub Container Registry'ye (GHCR) Giriş Yap
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # 7. Docker kuralı: İmaj adları küçük harf olmalıdır. Kullanıcı adını küçültüyoruz.
+    - name: Lowercase Repository Owner
+      id: repo-owner
       run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
+        echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+    # 8. Gateway API İmajını Derle ve Buluta Gönder (Push)
+    - name: Build and Push Gateway API Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: src/Services/Gateway/Gateway.Api/Dockerfile
+        push: true
+        tags: ghcr.io/${{ env.owner }}/acquiring-gateway-api:latest
+
+    # 9. Merchant API İmajını Derle ve Buluta Gönder (Push)
+    - name: Build and Push Merchant API Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: src/Services/Merchant/Merchant.Api/Dockerfile
+        push: true
+        tags: ghcr.io/${{ env.owner }}/acquiring-merchant-api:latest
