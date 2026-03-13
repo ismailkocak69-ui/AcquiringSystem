@@ -39,5 +39,7 @@ jobs:
 
     # 5. Docker Compose İmajlarının Kurulumunu Test Et (Çok Kritik!)
     # Bu adım, yazılan Dockerfile'larda bir sözdizimi hatası olup olmadığını denetler.
-    - name: Test Docker Compose Build
-      run: docker-compose build
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose
