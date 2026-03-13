@@ -1,0 +1,147 @@
+# --- 1. POSTGRESQL ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "AcquiringSecretPass1!"
+        - name: POSTGRES_DB
+          value: "AcquiringDb"
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres # Gateway'deki bağlantı dizesi buraya bakıyor!
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+
+# --- 2. RABBITMQ ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management-alpine
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq # MassTransit buraya bakıyor!
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+    - name: management
+      port: 15672
+
+# --- 3. MERCHANT API ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merchant-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: merchant-api
+  template:
+    metadata:
+      labels:
+        app: merchant-api
+    spec:
+      containers:
+      - name: merchant-api
+        image: merchant-api-image:latest
+        imagePullPolicy: Never # Kendi build ettiğimiz lokal imajı kullan
+        ports:
+        - containerPort: 5002
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: merchant-api # Gateway'deki HttpClient buraya bakıyor!
+spec:
+  selector:
+    app: merchant-api
+  ports:
+    - port: 5002
+
+# --- 4. GATEWAY API (Dış Dünyaya Açılan Kapı) ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api-deployment
+spec:
+  replicas: 1 # Trafik artarsa burayı 5 yapman yeterli! Auto-Scaling burada başlar.
+  selector:
+    matchLabels:
+      app: gateway-api
+  template:
+    metadata:
+      labels:
+        app: gateway-api
+    spec:
+      containers:
+      - name: gateway-api
+        image: gateway-api-image:latest
+        imagePullPolicy: Never 
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-api-service
+spec:
+  type: LoadBalancer # Bu servisi tarayıcından (localhost) erişilebilir yapar
+  selector:
+    app: gateway-api
+  ports:
+    - port: 5000
+      targetPort: 5000

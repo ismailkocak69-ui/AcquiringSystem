@@ -71,7 +71,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient("MerchantClient", client =>
 {
     // client.BaseAddress = new Uri("http://localhost:5002");
-    client.BaseAddress = new Uri("http://merchant.api:5002");
+    //client.BaseAddress = new Uri("http://merchant.api:5002");
+    client.BaseAddress = new Uri("http://merchant-api:5002");
 })
 .AddStandardResilienceHandler(options =>
 {
