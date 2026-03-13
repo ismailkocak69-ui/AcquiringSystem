@@ -6,6 +6,19 @@
 *.user
 *.sln.docstates
 
+# Visual Studio / .NET Core
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+
+# Docker
+.dockerignore
+
+# Elastic/Kibana/Postgres Data (Eğer local volume kullanırsan)
+docker-data/
+
 # Build results
 
 [Dd]ebug/
