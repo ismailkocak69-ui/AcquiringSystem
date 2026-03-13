@@ -1,0 +1,99 @@
+services:
+  merchant.api:
+    image: merchant-api-image
+    build:
+      context: .
+      dockerfile: src/Services/Merchant/Merchant.Api/Dockerfile
+    container_name: merchant_api_container
+    ports:
+      - "5002:5002"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    networks:
+      - acquiring_network
+
+# 2. Kalıcı Veritabanı: PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_container
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=AcquiringSecretPass1!
+      - POSTGRES_DB=AcquiringDb
+    ports:
+      - "5432:5432"
+    networks:
+      - acquiring_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d AcquiringDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# 3. Message Broker: RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq_container
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - acquiring_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+# 4. Gateway Servisi
+  gateway.api:
+    image: gateway-api-image
+    build:
+      context: . 
+      dockerfile: src/Services/Gateway/Gateway.Api/Dockerfile
+    container_name: gateway_api_container
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      merchant.api:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - acquiring_network
+
+# 5. Loglama ve Arama Motoru: Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: elasticsearch_container
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # RAM kullanımını sınırla
+    ports:
+      - "9200:9200"
+    networks:
+      - acquiring_network
+
+  # 6. Log Görselleştirme Paneli: Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana_container
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - acquiring_network
+networks:
+  acquiring_network:
+    driver: bridge

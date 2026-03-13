@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\Services\\Gateway\\Gateway.Api\\Gateway.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\Services\\Merchant\\Merchant.Api\\Merchant.Api.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
