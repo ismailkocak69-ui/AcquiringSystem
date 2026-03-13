@@ -9,6 +9,7 @@
     <Project Path="src/Services/Gateway/Gateway.Application/Gateway.Application.csproj" />
     <Project Path="src/Services/Gateway/Gateway.Domain/Gateway.Domain.csproj" />
     <Project Path="src/Services/Gateway/Gateway.Infrastructure/Gateway.Infrastructure.csproj" />
+    <Project Path="src/Services/Gateway/Gateway.UnitTests/Gateway.UnitTests.csproj" />
   </Folder>
   <Folder Name="/src/Services/Merchant/">
     <Project Path="src/Services/Merchant/Merchant.Api/Merchant.Api.csproj" />

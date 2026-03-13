@@ -36,9 +36,12 @@ jobs:
       run: |
         dotnet restore
         dotnet build --configuration Release --no-restore
+        
+    - name: Run Unit Tests
+      working-directory: ./src/Services/Gateway/Gateway.UnitTests
+      run: dotnet test --verbosity normal
 
-    # 5. Docker Compose İmajlarının Kurulumunu Test Et (Çok Kritik!)
-    # Bu adım, yazılan Dockerfile'larda bir sözdizimi hatası olup olmadığını denetler.
+    # 5. Docker Compose
     - name: Install Docker Compose
       run: |
         sudo apt-get update
