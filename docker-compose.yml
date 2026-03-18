@@ -32,7 +32,7 @@ services:
 
 # 3. Message Broker: RabbitMQ
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.13-management
     container_name: rabbitmq_container
     ports:
       - "5672:5672"
@@ -41,10 +41,10 @@ services:
       - acquiring_network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 40s # Docker'a "İlk 40 saniye boyunca hataları görmezden gel, bırak uyansın" diyoruz
 
 # 4. Gateway Servisi
   gateway.api:
@@ -66,6 +66,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - acquiring_network
 
@@ -94,6 +96,20 @@ services:
       - elasticsearch
     networks:
       - acquiring_network
+      
+  # 7. Identity Provider: Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak_container
+    environment:
+      - KEYCLOAK_ADMIN=admin          # Yönetim paneli kullanıcı adı
+      - KEYCLOAK_ADMIN_PASSWORD=admin # Yönetim paneli şifresi
+    command: start-dev                # Geliştirme modunda başlat (Hızlı kurulum için)
+    ports:
+      - "8080:8080"                   # Keycloak paneline ve token servisine erişim portu
+    networks:
+      - acquiring_network
+      
 networks:
   acquiring_network:
     driver: bridge

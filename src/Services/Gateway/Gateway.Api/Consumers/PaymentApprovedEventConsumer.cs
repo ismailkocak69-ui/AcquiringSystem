@@ -17,8 +17,10 @@ namespace Gateway.Api.Consumers
             var paymentEvent = context.Message;
 
             _logger.LogWarning(">>> [SETTLEMENT SÜRECİ BAŞLADI] <<<");
-            _logger.LogInformation("Gelen İşlem ID: {TransactionId}, Üye İşyeri: {MerchantId}",
-                paymentEvent.TransactionId, paymentEvent.MerchantId);
+            _logger.LogInformation("Yakalayan event: {Event} Gelen İşlem ID: {TransactionId}, Üye İşyeri: {MerchantId}",
+                nameof(PaymentApprovedEvent),
+                paymentEvent.TransactionId, 
+                paymentEvent.MerchantId);
 
             await Task.Delay(2000);
 

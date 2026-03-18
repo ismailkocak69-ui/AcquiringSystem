@@ -139,6 +139,11 @@ namespace Gateway.Api.Controllers
                     Amount = transaction.Amount,
                     ApprovedAt = transaction.CreatedAt
                 };
+
+                _logger.LogInformation("Ödeme başarılı. RabbitMQ'ya {EventName} fırlatılıyor. TransactionId: {TransactionId}",
+                    nameof(PaymentApprovedEvent),
+                    paymentEvent.TransactionId);
+
                 await _publishEndpoint.Publish(paymentEvent);
 
                 return Ok(new { Status = "Approved", TransactionId = transaction.Id });
