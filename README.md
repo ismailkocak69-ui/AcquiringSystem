@@ -17,19 +17,21 @@ A highly available, fault-tolerant, and scalable Payment Acquiring Gateway built
 - **Test-Driven Development (TDD):** Business logic validated by unit tests using **xUnit, Moq, and FluentAssertions**.
 - **CI/CD:** Automated build and test pipelines via **GitHub Actions**.
 
-### ✨ Recent Architectural Enhancements
-- **Database-per-Service (DDD Standard):** Deployed an isolated **PostgreSQL** database (`MerchantDb`) specifically for the Merchant API, ensuring strict domain boundary enforcement.
-- **EF Core Migrations & Resilient Startup:** Implemented automated database migrations and initial data seeding upon container startup with a resilient `try-catch` mechanism to prevent crash-loops.
-- **Performance Optimization (Cache-Aside Pattern):** Integrated an **In-Memory Distributed Cache** within the Merchant API. Validates merchant statuses in milliseconds directly from memory (Cache Hit), drastically reducing the load on the PostgreSQL database. Gracefully falls back to the database on Cache Misses.
+### ✨ Recent Architectural Enhancements (The "Enterprise" Touch)
+- **The Dual-Write Problem Solved (Outbox Pattern):** Implemented the **MassTransit EF Core Outbox Pattern**. This guarantees message delivery to RabbitMQ and ensures strict data consistency across distributed boundaries by combining the database save and event publish into a single atomic transaction.
+- **API Hardening (FluentValidation):** Eradicated manual validation logic from controllers. Incoming requests are now strictly validated against business rules using the **FluentValidation** library within the Application layer, enforcing Clean Architecture principles.
+- **Database-per-Service (DDD Standard):** Deployed an isolated **PostgreSQL** database (`MerchantDb`) specifically for the Merchant API, ensuring strict domain boundary enforcement with automated EF Core Migrations upon container startup.
+- **Performance Optimization (Cache-Aside Pattern):** Integrated an **In-Memory Distributed Cache** within the Merchant API. Validates merchant statuses in milliseconds directly from memory, drastically reducing the load on the PostgreSQL database.
 
 ## 💻 Tech Stack
 
 - **Framework:** .NET 10.0 (ASP.NET Core Web API & Minimal APIs)
 - **Database:** PostgreSQL (with EF Core Code-First Migrations)
+- **Messaging & Consistency:** RabbitMQ, MassTransit, Outbox Pattern
+- **Validation:** FluentValidation
 - **Caching:** Distributed Memory Cache (Cache-Aside Pattern)
-- **Message Broker:** RabbitMQ & MassTransit
 - **Observability:** Elasticsearch, Kibana, Serilog
-- **Testing:** xUnit, Moq, FluentAssertions, Microsoft.EntityFrameworkCore.InMemory
+- **Testing:** xUnit, Moq, FluentAssertions
 - **Containerization:** Docker & Docker Compose
 - **API UI:** Scalar.AspNetCore (OpenAPI)
 
