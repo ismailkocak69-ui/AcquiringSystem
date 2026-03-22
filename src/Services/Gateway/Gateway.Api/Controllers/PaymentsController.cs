@@ -1,14 +1,15 @@
-﻿using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
-using Gateway.Api.Models;
+﻿using FluentValidation;
 using Gateway.Api.Events;
-using MassTransit;
-using Gateway.Infrastructure.Data;
+using Gateway.Application.DTOs;
 using Gateway.Domain.Entities;
+using Gateway.Infrastructure.Data;
+using MassTransit;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Net.Http;
-using Microsoft.AspNetCore.Authorization;
+using System.Text.Json;
 
 namespace Gateway.Api.Controllers
 {
@@ -22,19 +23,22 @@ namespace Gateway.Api.Controllers
         private readonly GatewayDbContext _dbContext;
         private readonly IDistributedCache _cache;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IValidator<PaymentRequest> _validator;
 
         public PaymentsController(
             ILogger<PaymentsController> logger,
             IPublishEndpoint publishEndpoint,
             GatewayDbContext dbContext,
             IDistributedCache cache,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory, 
+            IValidator<PaymentRequest> validator)
         {
             _logger = logger;
             _publishEndpoint = publishEndpoint;
             _dbContext = dbContext;
             _cache = cache;
             _httpClientFactory = httpClientFactory;
+            _validator = validator;
         }
 
         [HttpGet("transactions")]

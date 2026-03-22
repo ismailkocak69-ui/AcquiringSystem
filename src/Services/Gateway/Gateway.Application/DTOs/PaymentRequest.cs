@@ -1,4 +1,4 @@
-﻿namespace Gateway.Api.Models
+﻿namespace Gateway.Application.DTOs
 {
     public class PaymentRequest
     {

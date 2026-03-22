@@ -1,13 +1,15 @@
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
+using FluentValidation;
 using Gateway.Api.Consumers;
+using Gateway.Application.Validators;
 using Gateway.Infrastructure.Data;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using Microsoft.AspNetCore.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -116,6 +118,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddValidatorsFromAssemblyContaining<PaymentRequestValidator>();
 
 var app = builder.Build();
 
