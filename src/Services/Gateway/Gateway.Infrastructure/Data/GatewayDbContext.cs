@@ -1,5 +1,6 @@
 ﻿using Gateway.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 
 namespace Gateway.Infrastructure.Data
 {
@@ -18,6 +19,10 @@ namespace Gateway.Infrastructure.Data
             modelBuilder.Entity<PaymentTransaction>()
                 .HasIndex(x => x.IdempotencyKey)
                 .IsUnique();
+
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+            modelBuilder.AddOutboxStateEntity();
         }
     }
 }

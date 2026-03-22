@@ -51,6 +51,13 @@ namespace Gateway.Api.Controllers
         [HttpPost("authorize")]
         public async Task<IActionResult> AuthorizePayment([FromBody] PaymentRequest request)
         {
+            var validationResult = await _validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("Geçersiz ödeme isteği alındı. Hatalar: {@Errors}", validationResult.Errors);
+                return BadRequest(validationResult.Errors.Select(e => new { Field = e.PropertyName, Error = e.ErrorMessage }));
+            }
+
             _logger.LogInformation("Ödeme isteği alındı. IdempotencyKey: {IdempotencyKey}", request.IdempotencyKey);
 
             var existingTransaction = await _dbContext.Transactions
@@ -114,9 +121,6 @@ namespace Gateway.Api.Controllers
             if (merchantStatus != "Active")
                 return BadRequest(new { Error = "Üye işyeri aktif değil!" });
 
-            if (request.Amount <= 0)
-                return BadRequest(new { Error = "Tutar 0'dan büyük olmalıdır." });
-
             var transaction = new PaymentTransaction
             {
                 Id = Guid.NewGuid(),
@@ -134,7 +138,6 @@ namespace Gateway.Api.Controllers
             {
                 transaction.Status = "Approved";
                 _dbContext.Transactions.Add(transaction);
-                await _dbContext.SaveChangesAsync();
 
                 var paymentEvent = new PaymentApprovedEvent
                 {
@@ -144,11 +147,12 @@ namespace Gateway.Api.Controllers
                     ApprovedAt = transaction.CreatedAt
                 };
 
-                _logger.LogInformation("Ödeme başarılı. RabbitMQ'ya {EventName} fırlatılıyor. TransactionId: {TransactionId}",
+                _logger.LogInformation("Ödeme başarılı. RabbitMQ event'i Outbox'a alınıyor. TransactionId: {TransactionId}",
                     nameof(PaymentApprovedEvent),
                     paymentEvent.TransactionId);
 
                 await _publishEndpoint.Publish(paymentEvent);
+                await _dbContext.SaveChangesAsync();
 
                 return Ok(new { Status = "Approved", TransactionId = transaction.Id });
             }

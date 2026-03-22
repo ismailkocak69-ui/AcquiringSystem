@@ -72,6 +72,12 @@ builder.Services.AddDbContext<GatewayDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
+    x.SetKebabCaseEndpointNameFormatter();
+    x.AddEntityFrameworkOutbox<GatewayDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
     x.AddConsumer<PaymentApprovedEventConsumer>();
     x.UsingRabbitMq((context, cfg) =>
     {
