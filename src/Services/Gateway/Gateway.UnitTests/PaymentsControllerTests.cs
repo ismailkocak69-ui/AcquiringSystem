@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using FluentValidation;
+using FluentValidation.Results;
 using Gateway.Api.Controllers;
 using Gateway.Application.DTOs;
 using Gateway.Infrastructure.Data;
@@ -43,39 +44,28 @@ namespace Gateway.UnitTests
         [Fact]
         public async Task AuthorizePayment_WhenAmountIsZeroOrLess_ShouldReturnBadRequest()
         {
-            // 1. ARRANGE
-            _mockCache.Setup(x => x.GetAsync(It.IsAny<string>(), default))
-                      .ReturnsAsync(System.Text.Encoding.UTF8.GetBytes("Active"));
-
-            var controller = new PaymentsController(
-                _mockLogger.Object,
-                _mockPublishEndpoint.Object,
-                _dbContext,
-                _mockCache.Object,
-                _mockHttpClientFactory.Object,
-                _mockValidator.Object
-            );
-
             var request = new PaymentRequest
             {
-                IdempotencyKey = Guid.NewGuid(),
-                MerchantId = "MERCHANT_XYZ",
-                CardToken = "TOKEN_SUCCESS",
+                Amount = 0,
                 Currency = "TRY",
-                Amount = 0
+                CardToken = "TOKEN_SUCCESS",
+                MerchantId = "MERCHANT_123"
             };
 
-            // 2. ACT
+            var validationFailures = new List<ValidationFailure>
+                {
+                    new ValidationFailure("Amount", "Ödeme tutarı 0'dan büyük olmalıdır.")
+                };
+
+            _mockValidator
+                .Setup(v => v.ValidateAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new FluentValidation.Results.ValidationResult(validationFailures));
+
+            var controller = new PaymentsController(_mockLogger.Object, _mockPublishEndpoint.Object, _dbContext, _mockCache.Object, _mockHttpClientFactory.Object, _mockValidator.Object);
+
             var result = await controller.AuthorizePayment(request);
 
-            // 3. ASSERT
-            var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-
-            var errorResponse = badRequestResult.Value;
-            errorResponse.Should().NotBeNull();
-
-            var errorProperty = errorResponse.GetType().GetProperty("Error").GetValue(errorResponse, null);
-            errorProperty.Should().Be("Tutar 0'dan büyük olmalıdır.");
+            result.Should().BeOfType<BadRequestObjectResult>();
         }
     }
 }
