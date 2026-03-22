@@ -17,10 +17,16 @@ A highly available, fault-tolerant, and scalable Payment Acquiring Gateway built
 - **Test-Driven Development (TDD):** Business logic validated by unit tests using **xUnit, Moq, and FluentAssertions**.
 - **CI/CD:** Automated build and test pipelines via **GitHub Actions**.
 
+### ✨ Recent Architectural Enhancements
+- **Database-per-Service (DDD Standard):** Deployed an isolated **PostgreSQL** database (`MerchantDb`) specifically for the Merchant API, ensuring strict domain boundary enforcement.
+- **EF Core Migrations & Resilient Startup:** Implemented automated database migrations and initial data seeding upon container startup with a resilient `try-catch` mechanism to prevent crash-loops.
+- **Performance Optimization (Cache-Aside Pattern):** Integrated an **In-Memory Distributed Cache** within the Merchant API. Validates merchant statuses in milliseconds directly from memory (Cache Hit), drastically reducing the load on the PostgreSQL database. Gracefully falls back to the database on Cache Misses.
+
 ## 💻 Tech Stack
 
 - **Framework:** .NET 10.0 (ASP.NET Core Web API & Minimal APIs)
 - **Database:** PostgreSQL (with EF Core Code-First Migrations)
+- **Caching:** Distributed Memory Cache (Cache-Aside Pattern)
 - **Message Broker:** RabbitMQ & MassTransit
 - **Observability:** Elasticsearch, Kibana, Serilog
 - **Testing:** xUnit, Moq, FluentAssertions, Microsoft.EntityFrameworkCore.InMemory
@@ -45,35 +51,40 @@ AcquiringSystem/
 │   │   │
 │   │   └── Merchant/
 │   │       └── Merchant.Api/            # Minimal API, Merchant Limits Validator
+│   │           └── Infrastructure/      # MerchantDb Context & EF Core Migrations
+```
 
-🚀 Getting Started (One-Click Deployment)
-Prerequisites
+## 🚀 Getting Started (One-Click Deployment)
+
+### Prerequisites
 Docker Desktop installed and running.
 
-Spin up the Ecosystem
-Navigate to the root directory where docker-compose.yml is located and run:
+### Spin up the Ecosystem
+Navigate to the root directory where `docker-compose.yml` is located and run:
 
+```bash
 docker-compose up --build -d
+```
 
-Note: The Gateway API will intelligently wait (via Docker healthchecks) until PostgreSQL and RabbitMQ are fully initialized before starting and applying database migrations.
+> **Note:** The Gateway and Merchant APIs will intelligently wait (via Docker healthchecks) until PostgreSQL and RabbitMQ are fully initialized before starting and applying database migrations.
 
-Access Points
-Gateway API (Scalar UI): http://localhost:5000/scalar
+### Access Points
+- **Gateway API (Scalar UI):** http://localhost:5000/scalar
+- **RabbitMQ Management:** http://localhost:15672 (guest / guest)
+- **Kibana (Logs Dashboard):** http://localhost:5601
 
-RabbitMQ Management: http://localhost:15672 (guest / guest)
+## 🔌 API Usage Example
 
-Kibana (Logs Dashboard): http://localhost:5601
-
-🔌 API Usage Example
-1. Get JWT Token
-Bash
+**1. Get JWT Token**
+```bash
 curl -X GET "http://localhost:5000/api/v1/auth/token"
-Copy the returned token.
+```
+*(Copy the returned token).*
 
-2. Authorize a Payment
+**2. Authorize a Payment**
 Use the token in the Authorization header. Sending the exact same payload twice will trigger the Idempotency protection.
 
-Bash
+```bash
 curl -X POST "http://localhost:5000/api/v1/Payments/authorize" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer YOUR_TOKEN_HERE" \
@@ -82,13 +93,16 @@ curl -X POST "http://localhost:5000/api/v1/Payments/authorize" \
            "cardToken": "TOKEN_SUCCESS",
            "amount": 500.00,
            "currency": "TRY",
-           "merchantId": "MERCHANT_XYZ"
+           "merchantId": "MERCHANT_123"
          }'
+```
 
-🧪 Running Tests
+## 🧪 Running Tests
 The project includes a robust unit testing suite to guarantee business rules. To run the tests locally:
 
-Bash
+```bash
 dotnet test src/Services/Gateway/Gateway.UnitTests
+```
 
-Architected and built with modern software engineering practices. Ready for production scale.
+---
+*Architected and built with modern software engineering practices. Ready for production scale.*
