@@ -12,6 +12,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
+using Gateway.Application.Interfaces;
+using Gateway.Infrastructure.Repositories;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
@@ -30,16 +32,12 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// ==========================================
-// YENİ NESİL .NET 10 OPENAPI (v4) VE SCALAR AYARI
-// ==========================================
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
         document.Components ??= new OpenApiComponents();
 
-        // ÇÖZÜM 1: Dictionary artık IOpenApiSecurityScheme (Interface) tipinde olmalı
         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
 
         document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
@@ -52,7 +50,6 @@ builder.Services.AddOpenApi(options =>
 
         document.Security ??= new List<OpenApiSecurityRequirement>();
 
-        // ÇÖZÜM 2 & 3: Id özelliğini atamak yerine constructor'a "Bearer" ve document'i gönderiyoruz!
         document.Security.Add(new OpenApiSecurityRequirement
         {
             [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
@@ -62,9 +59,6 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-// ==========================================
-// VERİTABANI, MASSTRANSIT VE HTTPCLIENT
-// ==========================================
 builder.Services.AddDbContext<GatewayDbContext>(options =>
 {
     options.UseNpgsql("Host=postgres;Database=AcquiringDb;Username=postgres;Password=AcquiringSecretPass1!");
@@ -101,9 +95,6 @@ builder.Services.AddHttpClient("MerchantClient", client =>
     options.Retry.MaxRetryAttempts = 3;
 });
 
-// ==========================================
-// KEYCLOAK GÜVENLİK AYARLARI
-// ==========================================
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -112,11 +103,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            // İmzayı ve süreyi KESİNLİKLE doğrula (Güvenliğin kalbi burasıdır)
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
 
-            // Local ortamda Audience ve Issuer katı kontrollerini esnetiyoruz
             ValidateAudience = false,
             ValidateIssuer = false
         };
@@ -127,6 +116,13 @@ builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddValidatorsFromAssemblyContaining<PaymentRequestValidator>();
 
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssemblyContaining<Gateway.Application.DTOs.PaymentRequest>();
+});
+
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -135,12 +131,8 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.Migrate();
 }
 
-// ==========================================
-// PIPELINE (UI VE ROTALAR)
-// ==========================================
 if (app.Environment.IsDevelopment())
 {
-    // Eski app.UseSwagger() yerine modern metotlar:
     app.MapOpenApi();
     app.MapScalarApiReference();
 }

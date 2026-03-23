@@ -1,4 +1,4 @@
-﻿namespace Gateway.Api.Events
+﻿namespace Gateway.Domain.Events
 {
     public record PaymentApprovedEvent
     {

@@ -1,4 +1,4 @@
-﻿using Gateway.Api.Events;
+﻿using Gateway.Domain.Events;
 using MassTransit;
 
 namespace Gateway.Api.Consumers
