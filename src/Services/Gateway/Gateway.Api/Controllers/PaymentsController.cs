@@ -2,6 +2,8 @@
 using Gateway.Application.DTOs;
 using Gateway.Application.Features.Payments.Commands;
 using Gateway.Application.Features.Payments.Queries;
+using Gateway.Domain.Events;
+using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,5 +48,20 @@ public class PaymentsController : ControllerBase
         }
 
         return Ok(new { Status = result.Status, TransactionId = result.TransactionId });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("test-settlement-fail/{transactionId}")]
+    public async Task<IActionResult> SimulateSettlementFail(Guid transactionId, [FromServices] IBus bus)
+    {
+        // bus.Publish Outbox'ı es geçer ve anında RabbitMQ'ya fırlatır
+        await bus.Publish(new SettlementFailedEvent
+        {
+            TransactionId = transactionId,
+            Reason = "Banka altyapı hatası (Simülasyon)",
+            FailedAt = DateTime.UtcNow
+        });
+
+        return Ok(new { Message = "Settlement başarısızlık eventi DOĞRUDAN RabbitMQ'ya fırlatıldı! Logları izle..." });
     }
 }

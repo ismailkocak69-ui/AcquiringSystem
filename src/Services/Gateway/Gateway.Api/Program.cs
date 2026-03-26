@@ -2,8 +2,11 @@ using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
 using FluentValidation;
 using Gateway.Api.Consumers;
+using Gateway.Application.Interfaces;
+using Gateway.Application.Sagas;
 using Gateway.Application.Validators;
 using Gateway.Infrastructure.Data;
+using Gateway.Infrastructure.Repositories;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.OpenApi;
@@ -12,8 +15,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
-using Gateway.Application.Interfaces;
-using Gateway.Infrastructure.Repositories;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
@@ -67,12 +68,24 @@ builder.Services.AddDbContext<GatewayDbContext>(options =>
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
+
+    x.AddSagaStateMachine<PaymentStateMachine, PaymentState>()
+        .EntityFrameworkRepository(r =>
+        {
+            r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+            r.ExistingDbContext<GatewayDbContext>();
+            r.UsePostgres();
+        });
+
     x.AddEntityFrameworkOutbox<GatewayDbContext>(o =>
     {
         o.UsePostgres();
         o.UseBusOutbox();
     });
+
     x.AddConsumer<PaymentApprovedEventConsumer>();
+    x.AddConsumer<CancelPaymentConsumer>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host("rabbitmq", "/", h => {

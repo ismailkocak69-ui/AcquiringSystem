@@ -1,6 +1,7 @@
 ﻿using Gateway.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
+using Gateway.Application.Sagas;
 
 namespace Gateway.Infrastructure.Data
 {
@@ -11,6 +12,7 @@ namespace Gateway.Infrastructure.Data
         }
 
         public DbSet<PaymentTransaction> Transactions { get; set; }
+        public DbSet<PaymentState> PaymentStates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -23,6 +25,15 @@ namespace Gateway.Infrastructure.Data
             modelBuilder.AddInboxStateEntity();
             modelBuilder.AddOutboxMessageEntity();
             modelBuilder.AddOutboxStateEntity();
+
+            modelBuilder.Entity<PaymentState>(entity =>
+            {
+                // Saga'nın zorunlu anahtarı (Primary Key)
+                entity.HasKey(x => x.CorrelationId);
+
+                // State ismini tutacağımız kolon (Max 64 karakter yeterli)
+                entity.Property(x => x.CurrentState).HasMaxLength(64);
+            });
         }
     }
 }

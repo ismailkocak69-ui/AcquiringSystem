@@ -8,4 +8,5 @@ public interface ITransactionRepository
     Task<PaymentTransaction?> GetByIdempotencyKeyAsync(Guid idempotencyKey, CancellationToken cancellationToken = default);
     Task AddAsync(PaymentTransaction transaction, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<PaymentTransaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }
