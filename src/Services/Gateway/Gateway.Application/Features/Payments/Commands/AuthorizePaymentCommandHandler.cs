@@ -35,10 +35,13 @@ public class AuthorizePaymentCommandHandler : IRequestHandler<AuthorizePaymentCo
     {
         var request = command.Request;
 
-        var existingTransaction = await _repository.GetByIdempotencyKeyAsync(request.IdempotencyKey, cancellationToken);
-        if (existingTransaction != null)
+        string idempotencyCacheKey = $"idempotency_{request.IdempotencyKey}";
+        var cachedTransaction = await _cache.GetStringAsync(idempotencyCacheKey, cancellationToken);
+
+        if (!string.IsNullOrEmpty(cachedTransaction))
         {
-            return new AuthorizePaymentResult { IsSuccess = true, Status = existingTransaction.Status, TransactionId = existingTransaction.Id };
+            _logger.LogInformation("Idempotency Cache HIT! DB'ye gidilmeden sonuç dönülüyor. Key: {Key}", request.IdempotencyKey);
+            return JsonSerializer.Deserialize<AuthorizePaymentResult>(cachedTransaction)!;
         }
 
         string cacheKey = $"merchant_status_{request.MerchantId}";
@@ -103,7 +106,12 @@ public class AuthorizePaymentCommandHandler : IRequestHandler<AuthorizePaymentCo
             await _publishEndpoint.Publish(paymentEvent, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
 
-            return new AuthorizePaymentResult { IsSuccess = true, Status = "Approved", TransactionId = transaction.Id };
+            var successResult = new AuthorizePaymentResult { IsSuccess = true, Status = "Approved", TransactionId = transaction.Id };
+
+            await _cache.SetStringAsync(idempotencyCacheKey, JsonSerializer.Serialize(successResult),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) }, cancellationToken);
+
+            return successResult;
         }
 
         transaction.Status = "Declined";
