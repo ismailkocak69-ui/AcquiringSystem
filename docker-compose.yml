@@ -5,8 +5,8 @@ services:
       context: .
       dockerfile: src/Services/Merchant/Merchant.Api/Dockerfile
     container_name: merchant_api_container
-    ports:
-      - "5002:5002"
+#    ports:
+#      - "5002:5002"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     networks:
@@ -53,8 +53,8 @@ services:
       context: . 
       dockerfile: src/Services/Gateway/Gateway.Api/Dockerfile
     container_name: gateway_api_container
-    ports:
-      - "5000:5000"
+#    ports:
+#      - "5000:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
