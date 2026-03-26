@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 using Merchant.Api.Infrastructure;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,19 @@ builder.Services.AddDbContext<MerchantDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("Merchant.Api"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddSource("Npgsql")
+            .AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri("http://jaeger:4317");
+            });
+    });
 
 var app = builder.Build();
 

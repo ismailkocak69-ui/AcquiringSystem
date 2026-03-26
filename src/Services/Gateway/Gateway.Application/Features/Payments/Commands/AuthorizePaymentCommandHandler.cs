@@ -36,12 +36,26 @@ public class AuthorizePaymentCommandHandler : IRequestHandler<AuthorizePaymentCo
         var request = command.Request;
 
         string idempotencyCacheKey = $"idempotency_{request.IdempotencyKey}";
+
         var cachedTransaction = await _cache.GetStringAsync(idempotencyCacheKey, cancellationToken);
 
         if (!string.IsNullOrEmpty(cachedTransaction))
         {
             _logger.LogInformation("Idempotency Cache HIT! DB'ye gidilmeden sonuç dönülüyor. Key: {Key}", request.IdempotencyKey);
             return JsonSerializer.Deserialize<AuthorizePaymentResult>(cachedTransaction)!;
+        }
+
+        var existingTransaction = await _repository.GetByIdempotencyKeyAsync(request.IdempotencyKey, cancellationToken);
+        if (existingTransaction != null)
+        {
+            _logger.LogWarning("Cache MISS ama veritabanında bulundu! IdempotencyKey: {Key}", request.IdempotencyKey);
+
+            var existingResult = new AuthorizePaymentResult { IsSuccess = true, Status = existingTransaction.Status, TransactionId = existingTransaction.Id };
+
+            await _cache.SetStringAsync(idempotencyCacheKey, JsonSerializer.Serialize(existingResult),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) }, cancellationToken);
+
+            return existingResult;
         }
 
         string cacheKey = $"merchant_status_{request.MerchantId}";

@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.RateLimiting;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using System.Threading.RateLimiting;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +29,18 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+
+// ...
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("Yarp.Gateway"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(opts => opts.Endpoint = new Uri("http://jaeger:4317"));
+    });
 
 var app = builder.Build();
 

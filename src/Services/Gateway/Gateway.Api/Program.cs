@@ -15,6 +15,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
@@ -32,6 +34,21 @@ builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("Gateway.Api"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("Npgsql")
+            .AddSource("MassTransit")
+            .AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri("http://jaeger:4317");
+            });
+    });
 
 builder.Services.AddOpenApi(options =>
 {
