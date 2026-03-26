@@ -3,6 +3,9 @@
     <File Path="docker-compose.yml" />
   </Folder>
   <Folder Name="/src/" />
+  <Folder Name="/src/ApiGateways/">
+    <Project Path="src/ApiGateways/YarpApiGateway/YarpApiGateway.csproj" />
+  </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/Gateway/">
     <Project Path="src/Services/Gateway/Gateway.Api/Gateway.Api.csproj" />

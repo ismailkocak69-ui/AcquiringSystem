@@ -110,6 +110,20 @@ services:
     networks:
       - acquiring_network
       
+  # 8. API Gateway (YARP)
+  yarp.api:
+    image: yarp.api
+    build:
+      context: .
+      dockerfile: src/ApiGateways/YarpApiGateway/Dockerfile
+    ports:
+      - "8000:8080"
+    networks:
+      - acquiring_network
+    depends_on:
+      - gateway.api
+      - merchant.api
+      
 networks:
   acquiring_network:
     driver: bridge
